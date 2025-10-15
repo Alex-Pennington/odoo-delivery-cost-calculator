@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Sale Order Form View - Add Recalculate Button -->
+    <record id="view_order_form_delivery_cost" model="ir.ui.view">
+        <field name="name">sale.order.form.delivery.cost</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <!-- Add recalculate button in header -->
+            <xpath expr="//header/button[@name='action_confirm']" position="before">
+                <button name="action_recalculate_delivery_cost" 
+                        type="object" 
+                        string="Recalculate Delivery Cost"
+                        class="oe_highlight"
+                        help="Recalculate delivery cost based on current customer location"
+                        invisible="state not in ('draft', 'sent')"/>
+            </xpath>
+            
+            <!-- Add delivery cost info in order lines tree view (optional, for visibility) -->
+            <xpath expr="//field[@name='order_line']/tree/field[@name='product_id']" position="after">
+                <field name="is_delivery_line" column_invisible="True"/>
+                <field name="delivery_cost_calculated" column_invisible="True"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Partner Form View - Show Distance Field -->
+    <record id="view_partner_form_distance" model="ir.ui.view">
+        <field name="name">res.partner.form.distance</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <!-- Add distance field after coordinates (if geo_localize view exists) -->
+            <xpath expr="//field[@name='partner_latitude']" position="after">
+                <field name="x_partner_distance" 
+                       readonly="1"
+                       help="Calculated distance from origin to customer location"/>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
