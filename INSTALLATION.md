@@ -149,10 +149,12 @@ Example:
 ```
 1. Go to Apps
 2. Search for "delivery" → ensure installed
-3. Search for "website_sale_delivery" → ensure installed
-4. If either missing, install them
+3. Optional: Search for "website_sale_delivery" → install if you have e-commerce
+4. If delivery module missing, install it
 5. Upgrade delivery_cost_calculator module
 ```
+
+**Note**: The GPS carrier will work for backend sales orders with just the `delivery` module. For website checkout integration, you also need `website_sale_delivery`.
 
 ### Debug Logging
 

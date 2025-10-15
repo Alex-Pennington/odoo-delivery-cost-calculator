@@ -30,6 +30,7 @@
           - Valid geocodable address
         * Automatically calculates exact shipping cost
         * Silently hides if conditions not met
+        * Requires website_sale_delivery module for e-commerce integration
         
         Configuration:
         --------------
@@ -48,7 +49,6 @@
         'sale',
         'base_geolocalize',
         'delivery',
-        'website_sale_delivery',
     ],
     'data': [
         'data/delivery_carrier_data.xml',

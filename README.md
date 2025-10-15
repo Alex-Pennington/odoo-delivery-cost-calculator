@@ -32,9 +32,11 @@ Automatic delivery cost calculation for Odoo 17 based on GPS distance from a fix
 Before installing this module, ensure you have:
 1. A product named "Delivery" (type: service, active: true)
 2. The `base_geolocalize` module installed
-3. The `delivery` module installed (for website checkout feature)
-4. The `website_sale_delivery` module installed (for e-commerce integration)
+3. The `delivery` module installed (for GPS carrier feature)
+4. *Optional*: The `website_sale_delivery` module (for e-commerce integration)
 5. Customer field `x_partner_distance` created on res.partner (Float type)
+
+**Note**: The GPS delivery carrier will only work on website checkout if `website_sale_delivery` is installed. Without it, the module still works for manual sales orders.
 
 ### Customization
 To modify default settings, edit the constants at the top of the model files:
@@ -215,10 +217,10 @@ View logs in Odoo's standard logging output.
 
 ### Dependencies
 
-- `sale`: Sales management module
-- `base_geolocalize`: GPS geocoding functionality
-- `delivery`: Delivery carrier management
-- `website_sale_delivery`: E-commerce shipping integration
+- `sale`: Sales management module (required)
+- `base_geolocalize`: GPS geocoding functionality (required)
+- `delivery`: Delivery carrier management (required for GPS carrier)
+- `website_sale_delivery`: E-commerce shipping integration (optional - for website checkout)
 
 ### Models Extended
 - `res.partner`: Distance calculation methods
