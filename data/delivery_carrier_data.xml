@@ -7,7 +7,6 @@
             <field name="delivery_type">gps</field>
             <field name="product_id" ref="delivery.product_product_delivery"/>
             <field name="company_id" ref="base.main_company"/>
-            <field name="website_published" eval="True"/>
             <field name="sequence">5</field>
             <field name="free_over" eval="False"/>
             <field name="amount">0</field>

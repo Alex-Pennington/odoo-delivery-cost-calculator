@@ -29,9 +29,21 @@ After upgrading, check:
 1. Go to **Inventory → Configuration → Delivery Methods**
 2. You should see: **"GPS Distance-Based Delivery"**
 3. Click on it to view details
-4. Ensure **"Website Published"** is checked ✓
+4. **If you have e-commerce/website**: Manually check **"Website Published"** checkbox
+5. Save the carrier
 
-### 3. Test on Website Checkout
+### 3. Enable for Website (If Applicable)
+
+**Only if you have e-commerce/website module installed:**
+
+1. Go to **Inventory → Configuration → Delivery Methods**
+2. Open **GPS Distance-Based Delivery**
+3. Check the **"Website Published"** checkbox
+4. Click **Save**
+
+**Note**: The "Website Published" field only appears if `website_sale_delivery` module is installed. If you don't see this field, the carrier will work for backend sales orders but not website checkout.
+
+### 4. Test on Website Checkout (Optional)
 
 1. Go to your e-commerce website
 2. Add products to cart (less than 8 units)
