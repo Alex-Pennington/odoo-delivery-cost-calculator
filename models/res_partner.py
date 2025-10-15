@@ -7,11 +7,12 @@ from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
-# Configuration constants - modify these to change behavior
-ORIGIN_LAT = 38.3353600
-ORIGIN_LON = -82.7815527
+# Default configuration constants - can be overridden in Settings
+DEFAULT_ORIGIN_LAT = 38.3353600
+DEFAULT_ORIGIN_LON = -82.7815527
+DEFAULT_RATE_PER_MILE = 3.0
+DEFAULT_MAX_DELIVERY_DISTANCE = 100.0
 EARTH_RADIUS_MILES = 3959
-MAX_DELIVERY_DISTANCE = 100  # Maximum delivery distance in miles
 
 
 class ResPartner(models.Model):
@@ -25,6 +26,35 @@ class ResPartner(models.Model):
         help='Calculated distance from origin point to customer location using Haversine formula',
         readonly=True,
     )
+
+    def _get_delivery_settings(self):
+        """
+        Get delivery configuration settings from system parameters.
+        Falls back to defaults if settings not configured.
+        
+        Returns:
+            dict: Dictionary with keys: origin_lat, origin_lon, rate_per_mile, max_distance
+        """
+        ICP = self.env['ir.config_parameter'].sudo()
+        
+        return {
+            'origin_lat': float(ICP.get_param(
+                'delivery_cost_calculator.origin_latitude',
+                DEFAULT_ORIGIN_LAT
+            )),
+            'origin_lon': float(ICP.get_param(
+                'delivery_cost_calculator.origin_longitude',
+                DEFAULT_ORIGIN_LON
+            )),
+            'rate_per_mile': float(ICP.get_param(
+                'delivery_cost_calculator.rate_per_mile',
+                DEFAULT_RATE_PER_MILE
+            )),
+            'max_distance': float(ICP.get_param(
+                'delivery_cost_calculator.max_distance',
+                DEFAULT_MAX_DELIVERY_DISTANCE
+            )),
+        }
 
     def calculate_distance_from_origin(self):
         """
@@ -106,11 +136,14 @@ class ResPartner(models.Model):
                 "Please verify the customer's address and try geocoding again."
             ) % (self.name, validation_error, self.partner_latitude, self.partner_longitude))
         
+        # Get delivery settings
+        settings = self._get_delivery_settings()
+        
         # Calculate distance using Haversine formula
         try:
             distance = self._haversine_distance(
-                ORIGIN_LAT,
-                ORIGIN_LON,
+                settings['origin_lat'],
+                settings['origin_lon'],
                 self.partner_latitude,
                 self.partner_longitude
             )
@@ -124,24 +157,24 @@ class ResPartner(models.Model):
             ) % (self.name, str(e)))
         
         # Validate customer is within delivery range
-        if distance > MAX_DELIVERY_DISTANCE:
+        if distance > settings['max_distance']:
             _logger.warning(
                 f"Partner {self.name} (ID: {self.id}) is outside delivery range: "
-                f"{distance:.2f} miles (max: {MAX_DELIVERY_DISTANCE} miles)"
+                f"{distance:.2f} miles (max: {settings['max_distance']} miles)"
             )
             raise UserError(_(
                 "Delivery Not Available for %s\n\n"
                 "Customer location is %.2f miles from origin.\n"
-                "Maximum delivery distance: %d miles.\n\n"
+                "Maximum delivery distance: %.0f miles.\n\n"
                 "This customer is outside the delivery service area."
-            ) % (self.name, distance, MAX_DELIVERY_DISTANCE))
+            ) % (self.name, distance, settings['max_distance']))
         
         # Store calculated distance in field for display purposes
         self.x_partner_distance = distance
         
         _logger.info(
             f"Calculated distance for partner {self.name} (ID: {self.id}): "
-            f"{distance:.2f} miles from origin ({ORIGIN_LAT}, {ORIGIN_LON})"
+            f"{distance:.2f} miles from origin ({settings['origin_lat']}, {settings['origin_lon']})"
         )
         
         return distance

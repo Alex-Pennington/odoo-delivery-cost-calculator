@@ -6,9 +6,9 @@ from odoo.exceptions import UserError, ValidationError
 
 _logger = logging.getLogger(__name__)
 
-# Configuration constants - modify these to change behavior
-RATE_PER_MILE = 3.0
+# Configuration constants
 DELIVERY_PRODUCT_NAME = 'Delivery'
+DEFAULT_RATE_PER_MILE = 3.0  # Fallback if setting not configured
 
 
 class SaleOrderLine(models.Model):
@@ -26,6 +26,19 @@ class SaleOrderLine(models.Model):
         default=False,
         help='Flag to prevent automatic recalculation of delivery cost'
     )
+
+    def _get_rate_per_mile(self):
+        """
+        Get the configured rate per mile from system settings.
+        
+        Returns:
+            float: Rate per mile for delivery cost calculation
+        """
+        ICP = self.env['ir.config_parameter'].sudo()
+        return float(ICP.get_param(
+            'delivery_cost_calculator.rate_per_mile',
+            DEFAULT_RATE_PER_MILE
+        ))
 
     @api.depends('product_id', 'product_id.name', 'product_id.type', 'product_id.active')
     def _compute_is_delivery_line(self):
@@ -74,11 +87,14 @@ class SaleOrderLine(models.Model):
         try:
             partner = self.order_id.partner_id
             
+            # Get configured rate per mile
+            rate_per_mile = self._get_rate_per_mile()
+            
             # Calculate distance (includes auto-geocoding if needed)
             distance = partner.calculate_distance_from_origin()
             
             # Calculate delivery cost
-            delivery_cost = distance * RATE_PER_MILE
+            delivery_cost = distance * rate_per_mile
             
             # Update order line with calculated price
             self.price_unit = delivery_cost
@@ -86,7 +102,7 @@ class SaleOrderLine(models.Model):
             
             _logger.info(
                 f"Delivery cost calculated for SO {self.order_id.name}: "
-                f"Distance={distance:.2f} miles, Rate=${RATE_PER_MILE:.2f}/mile, "
+                f"Distance={distance:.2f} miles, Rate=${rate_per_mile:.2f}/mile, "
                 f"Total=${delivery_cost:.2f}"
             )
             
@@ -102,7 +118,7 @@ class SaleOrderLine(models.Model):
                         'Total Delivery Cost: $%.2f\n\n'
                         'This price is now locked and will not change automatically '
                         'if the customer address is updated.'
-                    ) % (partner.name, distance, RATE_PER_MILE, delivery_cost)
+                    ) % (partner.name, distance, rate_per_mile, delivery_cost)
                 }
             }
             
@@ -151,11 +167,14 @@ class SaleOrderLine(models.Model):
                 try:
                     partner = line.order_id.partner_id
                     
+                    # Get configured rate per mile
+                    rate_per_mile = line._get_rate_per_mile()
+                    
                     # Calculate distance
                     distance = partner.calculate_distance_from_origin()
                     
                     # Calculate and set delivery cost
-                    delivery_cost = distance * RATE_PER_MILE
+                    delivery_cost = distance * rate_per_mile
                     line.write({
                         'price_unit': delivery_cost,
                         'delivery_cost_calculated': True,
@@ -218,11 +237,14 @@ class SaleOrder(models.Model):
         # Process each delivery line
         for line in delivery_lines:
             try:
+                # Get configured rate per mile
+                rate_per_mile = line._get_rate_per_mile()
+                
                 # Recalculate distance
                 distance = self.partner_id.calculate_distance_from_origin()
                 
                 # Calculate new delivery cost
-                delivery_cost = distance * RATE_PER_MILE
+                delivery_cost = distance * rate_per_mile
                 
                 # Update line
                 line.write({
@@ -253,7 +275,7 @@ class SaleOrder(models.Model):
                     'Distance: %.2f miles\n'
                     'Rate: $%.2f per mile\n'
                     'Total: $%.2f'
-                ) % (distance, RATE_PER_MILE, delivery_cost),
+                ) % (distance, rate_per_mile, delivery_cost),
                 'type': 'success',
                 'sticky': False,
             }
@@ -273,10 +295,13 @@ class SaleOrder(models.Model):
         if not delivery_line:
             return None
         
+        # Get configured rate per mile
+        rate_per_mile = delivery_line._get_rate_per_mile()
+        
         return {
             'line': delivery_line,
             'distance': self.partner_id.x_partner_distance,
-            'rate': RATE_PER_MILE,
+            'rate': rate_per_mile,
             'cost': delivery_line.price_unit,
             'calculated': delivery_line.delivery_cost_calculated,
         }

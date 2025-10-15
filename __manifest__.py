@@ -58,6 +58,7 @@
         'data/delivery_carrier_data.xml',
         'views/sale_order_views.xml',
         'views/delivery_carrier_views.xml',
+        'views/res_config_settings_views.xml',
     ],
     'installable': True,
     'application': False,

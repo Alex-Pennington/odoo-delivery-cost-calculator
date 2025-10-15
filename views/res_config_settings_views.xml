@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Add Delivery Cost Calculator settings to Sales settings page -->
+    <record id="res_config_settings_view_form" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.delivery.cost</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="90"/>
+        <field name="inherit_id" ref="sale.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <!-- Add settings block after other sale settings -->
+            <xpath expr="//div[hasclass('settings')]" position="inside">
+                <div class="app_settings_block" data_key="delivery_cost_calculator" string="GPS Delivery Cost Calculator">
+                    <h2>GPS Delivery Cost Calculator</h2>
+                    
+                    <!-- Origin Coordinates -->
+                    <div class="row mt16 o_settings_container">
+                        <div class="col-12 col-lg-6 o_setting_box">
+                            <div class="o_setting_left_pane">
+                                <field name="delivery_origin_latitude"/>
+                            </div>
+                            <div class="o_setting_right_pane">
+                                <label for="delivery_origin_latitude" string="Origin Latitude"/>
+                                <div class="text-muted">
+                                    Latitude coordinate of your delivery starting point (decimal degrees)
+                                </div>
+                                <div class="content-group">
+                                    <div class="mt16">
+                                        <field name="delivery_origin_latitude" class="o_light_label" widget="float"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12 col-lg-6 o_setting_box">
+                            <div class="o_setting_left_pane">
+                                <field name="delivery_origin_longitude"/>
+                            </div>
+                            <div class="o_setting_right_pane">
+                                <label for="delivery_origin_longitude" string="Origin Longitude"/>
+                                <div class="text-muted">
+                                    Longitude coordinate of your delivery starting point (decimal degrees)
+                                </div>
+                                <div class="content-group">
+                                    <div class="mt16">
+                                        <field name="delivery_origin_longitude" class="o_light_label" widget="float"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Pricing Configuration -->
+                    <div class="row mt16 o_settings_container">
+                        <div class="col-12 col-lg-6 o_setting_box">
+                            <div class="o_setting_left_pane">
+                                <field name="delivery_rate_per_mile"/>
+                            </div>
+                            <div class="o_setting_right_pane">
+                                <label for="delivery_rate_per_mile" string="Rate per Mile"/>
+                                <div class="text-muted">
+                                    Cost per mile for delivery calculation (e.g., 3.0 = $3.00/mile)
+                                </div>
+                                <div class="content-group">
+                                    <div class="mt16">
+                                        <field name="delivery_rate_per_mile" class="o_light_label" widget="monetary"/>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Distance Restrictions -->
+                    <div class="row mt16 o_settings_container">
+                        <div class="col-12 col-lg-6 o_setting_box">
+                            <div class="o_setting_left_pane">
+                                <field name="delivery_max_distance"/>
+                            </div>
+                            <div class="o_setting_right_pane">
+                                <label for="delivery_max_distance" string="Maximum Delivery Distance"/>
+                                <div class="text-muted">
+                                    Maximum distance in miles for manual delivery orders (customers beyond this will be rejected)
+                                </div>
+                                <div class="content-group">
+                                    <div class="mt16">
+                                        <field name="delivery_max_distance" class="o_light_label"/> miles
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-12 col-lg-6 o_setting_box">
+                            <div class="o_setting_left_pane">
+                                <field name="delivery_gps_carrier_max_distance"/>
+                            </div>
+                            <div class="o_setting_right_pane">
+                                <label for="delivery_gps_carrier_max_distance" string="GPS Carrier Max Distance"/>
+                                <div class="text-muted">
+                                    Maximum distance for GPS delivery carrier on website checkout
+                                </div>
+                                <div class="content-group">
+                                    <div class="mt16">
+                                        <field name="delivery_gps_carrier_max_distance" class="o_light_label"/> miles
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Order Quantity Restrictions -->
+                    <div class="row mt16 o_settings_container">
+                        <div class="col-12 col-lg-6 o_setting_box">
+                            <div class="o_setting_left_pane">
+                                <field name="delivery_max_order_quantity"/>
+                            </div>
+                            <div class="o_setting_right_pane">
+                                <label for="delivery_max_order_quantity" string="Maximum Order Quantity"/>
+                                <div class="text-muted">
+                                    Maximum number of items for GPS delivery carrier on website
+                                </div>
+                                <div class="content-group">
+                                    <div class="mt16">
+                                        <field name="delivery_max_order_quantity" class="o_light_label"/> items
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -6,12 +6,10 @@ from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
-# Configuration constants - modify these to change behavior
-ORIGIN_LAT = 38.3353600
-ORIGIN_LON = -82.7815527
-RATE_PER_MILE = 3.0
-MAX_DISTANCE_MILES = 60.0
-MAX_ORDER_QUANTITY = 8
+# Default configuration constants - overridden by settings
+DEFAULT_RATE_PER_MILE = 3.0
+DEFAULT_MAX_DISTANCE_MILES = 60.0
+DEFAULT_MAX_ORDER_QUANTITY = 8
 
 
 class DeliveryCarrier(models.Model):
@@ -21,6 +19,30 @@ class DeliveryCarrier(models.Model):
         selection_add=[('gps', 'GPS Distance Based')],
         ondelete={'gps': 'set default'}
     )
+
+    def _get_gps_delivery_settings(self):
+        """
+        Get GPS delivery configuration settings from system parameters.
+        
+        Returns:
+            dict: Dictionary with keys: rate_per_mile, max_distance, max_quantity
+        """
+        ICP = self.env['ir.config_parameter'].sudo()
+        
+        return {
+            'rate_per_mile': float(ICP.get_param(
+                'delivery_cost_calculator.rate_per_mile',
+                DEFAULT_RATE_PER_MILE
+            )),
+            'max_distance': float(ICP.get_param(
+                'delivery_cost_calculator.gps_carrier_max_distance',
+                DEFAULT_MAX_DISTANCE_MILES
+            )),
+            'max_quantity': int(ICP.get_param(
+                'delivery_cost_calculator.max_order_quantity',
+                DEFAULT_MAX_ORDER_QUANTITY
+            )),
+        }
 
     def gps_rate_shipment(self, order):
         """
@@ -62,6 +84,9 @@ class DeliveryCarrier(models.Model):
                 'warning_message': False
             }
         
+        # Get GPS delivery settings
+        settings = self._get_gps_delivery_settings()
+        
         # Calculate total order quantity (excluding delivery/service products)
         total_qty = sum(
             line.product_uom_qty 
@@ -75,10 +100,10 @@ class DeliveryCarrier(models.Model):
         )
         
         # Check quantity constraint
-        if total_qty >= MAX_ORDER_QUANTITY:
+        if total_qty >= settings['max_quantity']:
             _logger.info(
                 f"GPS delivery unavailable for order {order.name}: "
-                f"Quantity {total_qty} >= {MAX_ORDER_QUANTITY} units"
+                f"Quantity {total_qty} >= {settings['max_quantity']} units"
             )
             return {
                 'success': False,
@@ -151,10 +176,10 @@ class DeliveryCarrier(models.Model):
             }
         
         # Check distance constraint
-        if distance > MAX_DISTANCE_MILES:
+        if distance > settings['max_distance']:
             _logger.info(
                 f"GPS delivery unavailable for order {order.name}: "
-                f"Distance {distance:.2f} miles > {MAX_DISTANCE_MILES} miles"
+                f"Distance {distance:.2f} miles > {settings['max_distance']} miles"
             )
             return {
                 'success': False,
@@ -164,7 +189,7 @@ class DeliveryCarrier(models.Model):
             }
         
         # Calculate shipping price
-        price = distance * RATE_PER_MILE
+        price = distance * settings['rate_per_mile']
         
         _logger.info(
             f"GPS delivery available for order {order.name}: "
