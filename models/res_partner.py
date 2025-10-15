@@ -11,6 +11,7 @@ _logger = logging.getLogger(__name__)
 ORIGIN_LAT = 38.3353600
 ORIGIN_LON = -82.7815527
 EARTH_RADIUS_MILES = 3959
+MAX_DELIVERY_DISTANCE = 100  # Maximum delivery distance in miles
 
 
 class ResPartner(models.Model):
@@ -122,6 +123,19 @@ class ResPartner(models.Model):
                 "Error: %s"
             ) % (self.name, str(e)))
         
+        # Validate customer is within delivery range
+        if distance > MAX_DELIVERY_DISTANCE:
+            _logger.warning(
+                f"Partner {self.name} (ID: {self.id}) is outside delivery range: "
+                f"{distance:.2f} miles (max: {MAX_DELIVERY_DISTANCE} miles)"
+            )
+            raise UserError(_(
+                "Delivery Not Available for %s\n\n"
+                "Customer location is %.2f miles from origin.\n"
+                "Maximum delivery distance: %d miles.\n\n"
+                "This customer is outside the delivery service area."
+            ) % (self.name, distance, MAX_DELIVERY_DISTANCE))
+        
         # Store calculated distance in field for display purposes
         self.x_partner_distance = distance
         
@@ -140,7 +154,9 @@ class ResPartner(models.Model):
         - Zero or null values
         - Out of valid range (lat: -90 to 90, lon: -180 to 180)
         - Suspiciously large values (>1000) that indicate bad data
-        - Ocean coordinates far from land (basic sanity check)
+        
+        Note: Distance validation (100-mile radius) is performed separately
+        after coordinates are validated.
         
         Returns:
             str: Error message if validation fails, None if coordinates are valid
