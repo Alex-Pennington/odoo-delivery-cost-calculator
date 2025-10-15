@@ -67,7 +67,7 @@ class ResPartner(models.Model):
                     ) % self.name
                     _logger.error(
                         f"Geocoding failed for partner {self.name} (ID: {self.id}). "
-                        f"Address: {self._display_address()}"
+                        f"Address: {self._format_address_for_log()}"
                     )
                     raise UserError(error_msg)
                     
@@ -131,9 +131,11 @@ class ResPartner(models.Model):
         
         return distance
 
-    def _display_address(self):
+    def _format_address_for_log(self):
         """
-        Helper method to display partner address for logging/error messages.
+        Helper method to format partner address for logging/error messages.
+        
+        Note: Named differently from Odoo's _display_address() to avoid conflicts.
         
         Returns:
             str: Formatted address string
