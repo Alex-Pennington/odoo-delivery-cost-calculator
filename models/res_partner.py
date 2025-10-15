@@ -17,13 +17,12 @@ class ResPartner(models.Model):
     _inherit = 'res.partner'
 
     # Keep field definition for backward compatibility with existing views/modules
-    # but don't store values - distance is calculated dynamically when needed
+    # Distance is calculated using Haversine formula and stored for display purposes
     x_partner_distance = fields.Float(
         string='Distance from Origin (miles)',
         digits=(10, 2),
-        help='This field is deprecated. Distance is now calculated dynamically when creating orders.',
+        help='Calculated distance from origin point to customer location using Haversine formula',
         readonly=True,
-        default=0.0,
     )
 
     def calculate_distance_from_origin(self):
@@ -106,6 +105,9 @@ class ResPartner(models.Model):
                 "Failed to calculate distance for %s.\n\n"
                 "Error: %s"
             ) % (self.name, str(e)))
+        
+        # Store calculated distance in field for display purposes
+        self.x_partner_distance = distance
         
         _logger.info(
             f"Calculated distance for partner {self.name} (ID: {self.id}): "
