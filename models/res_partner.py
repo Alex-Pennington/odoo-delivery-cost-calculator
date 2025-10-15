@@ -18,6 +18,17 @@ EARTH_RADIUS_MILES = 3959
 class ResPartner(models.Model):
     _inherit = 'res.partner'
 
+    # Legacy field for backward compatibility
+    # Some views/modules may reference this field
+    # Our module calculates distance dynamically and doesn't populate this field
+    x_partner_distance = fields.Float(
+        string='Distance from Origin (miles)',
+        digits=(10, 2),
+        help='Legacy field - distance is now calculated dynamically when needed',
+        readonly=True,
+        default=0.0,
+    )
+
     def _get_delivery_settings(self):
         """
         Get delivery configuration settings from system parameters.
