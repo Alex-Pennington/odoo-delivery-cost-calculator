@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Delivery Carrier Form View - Add GPS Configuration Info -->
+    <record id="view_delivery_carrier_form_gps" model="ir.ui.view">
+        <field name="name">delivery.carrier.form.gps</field>
+        <field name="model">delivery.carrier</field>
+        <field name="inherit_id" ref="delivery.view_delivery_carrier_form"/>
+        <field name="arch" type="xml">
+            <!-- Add info message for GPS delivery type -->
+            <xpath expr="//field[@name='delivery_type']" position="after">
+                <div class="alert alert-info" role="alert" 
+                     invisible="delivery_type != 'gps'">
+                    <strong>GPS Distance-Based Delivery Configuration</strong>
+                    <ul class="mb-0">
+                        <li><strong>Origin:</strong> 38.3353600, -82.7815527</li>
+                        <li><strong>Rate:</strong> $3.00 per mile</li>
+                        <li><strong>Max Distance:</strong> 60 miles</li>
+                        <li><strong>Max Order Quantity:</strong> 8 units</li>
+                    </ul>
+                    <p class="mb-0 mt-2">
+                        <em>To customize these values, edit constants in 
+                        models/delivery_carrier.py</em>
+                    </p>
+                </div>
+            </xpath>
+        </field>
+    </record>
+</odoo>

@@ -1,15 +1,19 @@
 # Delivery Cost Calculator Module
 
 ## Overview
+
 Automatic delivery cost calculation for Odoo 17 based on GPS distance from a fixed origin point.
 
 ## Features
+
 - ✅ Automatic GPS geocoding for customers without coordinates
 - ✅ Distance calculation from fixed origin point (38.3353600, -82.7815527)
 - ✅ Configurable rate per mile ($3.00 default)
 - ✅ Price locking - calculated cost doesn't change on address updates
 - ✅ Manual recalculation option via button
 - ✅ Works with manual quotes and website/e-commerce orders
+- ✅ **NEW: Custom GPS delivery carrier for website checkout**
+- ✅ **NEW: Smart availability rules (max 60 miles, max 8 units)**
 - ✅ Comprehensive error handling and user feedback
 - ✅ Detailed logging for debugging
 
@@ -24,10 +28,13 @@ Automatic delivery cost calculation for Odoo 17 based on GPS distance from a fix
 ## Configuration
 
 ### Prerequisites
+
 Before installing this module, ensure you have:
 1. A product named "Delivery" (type: service, active: true)
 2. The `base_geolocalize` module installed
-3. Customer field `x_partner_distance` created on res.partner (Float type)
+3. The `delivery` module installed (for website checkout feature)
+4. The `website_sale_delivery` module installed (for e-commerce integration)
+5. Customer field `x_partner_distance` created on res.partner (Float type)
 
 ### Customization
 To modify default settings, edit the constants at the top of the model files:
@@ -44,6 +51,15 @@ PI = 3.14159
 ```python
 RATE_PER_MILE = 3.0  # Delivery rate per mile
 DELIVERY_PRODUCT_NAME = 'Delivery'  # Name of delivery product
+```
+
+**In `models/delivery_carrier.py`:**
+```python
+ORIGIN_LAT = 38.3353600  # Origin latitude
+ORIGIN_LON = -82.7815527  # Origin longitude
+RATE_PER_MILE = 3.0  # Delivery rate per mile
+MAX_DISTANCE_MILES = 60.0  # Maximum delivery distance
+MAX_ORDER_QUANTITY = 8  # Maximum order quantity for GPS delivery
 ```
 
 ## Usage
@@ -66,15 +82,41 @@ If you need to recalculate delivery cost (e.g., customer moved):
 3. New cost is calculated and applied
 
 ### Website/E-commerce Orders
+
 The module automatically handles orders created through:
 - Odoo eCommerce/website
 - API integrations
 - Order imports
 - Any programmatic order creation
 
+#### GPS Distance-Based Delivery Carrier
+
+A custom delivery carrier is automatically created for website checkout:
+
+**Availability Rules:**
+- ✅ Customer within 60 miles of origin
+- ✅ Order quantity less than 8 units (physical products only)
+- ✅ Valid geocodable address
+
+**Behavior:**
+- Appears as "GPS Distance-Based Delivery" in shipping options
+- Shows calculated price based on exact distance
+- Automatically recalculates when address/cart changes
+- Silently hides if conditions not met (no error shown to customer)
+- Works alongside existing delivery methods
+
+**Example Checkout Flow:**
+1. Customer enters shipping address
+2. Odoo geocodes address (if needed)
+3. Calculates distance from origin
+4. Checks availability rules
+5. If available: Shows "GPS Distance-Based Delivery - $XX.XX"
+6. Customer selects and completes checkout
+
 ## How It Works
 
 ### Workflow
+
 1. **Product Detection**: Identifies "Delivery" product (service type, active)
 2. **Customer Validation**: Ensures customer is selected
 3. **GPS Check**: Verifies customer has coordinates
@@ -82,6 +124,20 @@ The module automatically handles orders created through:
 5. **Distance Calculation**: Uses approximation formula for speed
 6. **Price Setting**: Sets price_unit = distance × rate
 7. **Price Lock**: Sets flag to prevent automatic recalculation
+
+### Website Checkout Workflow (GPS Carrier)
+
+1. **Customer enters address** in checkout
+2. **Address validation**: System geocodes if coordinates missing
+3. **Availability check**: 
+   - Calculate distance from origin
+   - Count order quantity (physical products only)
+   - Check constraints (≤60 miles, <8 units)
+4. **Display shipping options**:
+   - If available: Shows GPS carrier with calculated price
+   - If not available: Carrier hidden, other methods shown
+5. **Customer selects** shipping method
+6. **Order creation**: Delivery price applied to order
 
 ### Distance Formula
 Uses a simplified distance approximation suitable for relatively short distances:
@@ -116,8 +172,20 @@ For more accurate long-distance calculations, consider implementing the Haversin
   - Country
 
 ### Invalid Address
-- **Trigger**: Geocoding fails due to invalid/incomplete address
-- **Action**: UserError with helpful guidance
+
+- **Trigger**: Address cannot be geocoded
+- **Action**: UserError with instructions to verify address completeness:
+  - Street address
+  - City
+  - State/Province
+  - ZIP/Postal code
+  - Country
+
+### GPS Carrier Not Available (Website Checkout)
+
+- **Trigger**: Distance >60 miles OR quantity ≥8 units OR geocoding fails
+- **Action**: Carrier silently hidden from shipping options (no error to customer)
+- **User Experience**: Customer sees other available delivery methods only
 
 ## Fields Added
 
@@ -125,8 +193,14 @@ For more accurate long-distance calculations, consider implementing the Haversin
 - `x_partner_distance` (Float): Stores calculated distance in miles
 
 ### sale.order.line
+
 - `is_delivery_line` (Boolean, computed): Identifies delivery product lines
 - `delivery_cost_calculated` (Boolean): Flag to prevent recalculation
+
+### delivery.carrier
+
+- `delivery_type` (Selection): Extends to include 'gps' option
+- New carrier record: "GPS Distance-Based Delivery"
 
 ## Logging
 
@@ -140,8 +214,11 @@ View logs in Odoo's standard logging output.
 ## Technical Details
 
 ### Dependencies
+
 - `sale`: Sales management module
 - `base_geolocalize`: GPS geocoding functionality
+- `delivery`: Delivery carrier management
+- `website_sale_delivery`: E-commerce shipping integration
 
 ### Models Extended
 - `res.partner`: Distance calculation methods
@@ -164,14 +241,42 @@ View logs in Odoo's standard logging output.
 - `action_recalculate_delivery_cost()`: Manual recalculation
 - `_get_delivery_cost_info()`: Helper to get delivery info
 
+**delivery.carrier:**
+- `gps_rate_shipment()`: Calculate shipping rate based on GPS distance
+- `gps_send_shipping()`: Process shipment (mark as shipped)
+- `gps_get_tracking_link()`: Return tracking link (returns False for local delivery)
+- `gps_cancel_shipment()`: Cancel shipment
+
 ## Troubleshooting
 
 ### Delivery cost not calculating
+
 1. Verify "Delivery" product exists and is active
 2. Confirm product type is "service"
 3. Check product name exactly matches (case-insensitive)
 4. Ensure customer is selected
 5. Review logs for error messages
+
+### GPS carrier not appearing in website checkout
+
+1. **Check distance**: Customer must be within 60 miles
+   - View partner record → check `x_partner_distance` field
+   - Manually calculate: Is address within 60 miles of origin?
+2. **Check quantity**: Order must have less than 8 units
+   - Review cart items
+   - Only physical products (type='product' or 'consu') count
+3. **Check address**: Must be valid and geocodable
+   - Open partner in Odoo
+   - Verify GPS coordinates populated
+   - Try manual geocoding: Click "Geo Localize" button
+4. **Check carrier**: Ensure GPS carrier is active
+   - Go to Inventory → Configuration → Delivery Methods
+   - Find "GPS Distance-Based Delivery"
+   - Ensure "Website Published" is checked
+5. **Check module**: Verify dependencies installed
+   - `delivery` module installed
+   - `website_sale_delivery` module installed
+6. **Check logs**: Review Odoo logs for "GPS delivery" messages
 
 ### Geocoding fails
 1. Verify customer has complete address
@@ -185,9 +290,22 @@ View logs in Odoo's standard logging output.
 4. Verify `base_geolocalize` module is installed
 
 ### Price keeps recalculating
+
 - This shouldn't happen - price is locked by `delivery_cost_calculated` flag
 - Check if flag is being reset elsewhere in customizations
 - Review logs for unexpected recalculations
+
+### GPS carrier shows for orders over 60 miles
+
+- Check `MAX_DISTANCE_MILES` constant in `models/delivery_carrier.py`
+- Verify partner's `x_partner_distance` field is calculated correctly
+- Review logs for distance calculation messages
+
+### All orders show GPS carrier regardless of quantity
+
+- Check `MAX_ORDER_QUANTITY` constant in `models/delivery_carrier.py`
+- Verify quantity calculation includes only physical products
+- Check for service products incorrectly typed as 'product'
 
 ## Upgrading
 
@@ -203,6 +321,14 @@ LGPL-3
 For issues or questions, contact your system administrator or module developer.
 
 ## Version History
+
+- **17.0.2.0.0**: GPS Delivery Carrier Feature
+  - Added custom GPS delivery carrier for website checkout
+  - Smart availability rules (max 60 miles, max 8 units)
+  - Integration with Odoo delivery/website_sale_delivery modules
+  - Comprehensive logging for carrier availability checks
+  - Configuration view in delivery carrier form
+
 - **17.0.1.0.0**: Initial release
   - Automatic delivery cost calculation
   - GPS geocoding integration
