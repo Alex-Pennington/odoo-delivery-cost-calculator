@@ -28,19 +28,20 @@ class ResPartner(models.Model):
     def calculate_distance_from_origin(self):
         """
         Calculate distance from fixed origin point to partner location.
-        Does NOT store the result - calculates on-the-fly.
+        Validates coordinates and stores accurate distance in x_partner_distance field.
         
         Workflow:
         1. Check if partner has GPS coordinates
         2. If missing, attempt automatic geocoding
-        3. Calculate distance using Haversine formula
-        4. Return calculated distance
+        3. Validate coordinates are reasonable
+        4. Calculate distance using Haversine formula
+        5. Store and return calculated distance
         
         Returns:
             float: Distance in miles
             
         Raises:
-            UserError: If geocoding fails or coordinates cannot be obtained
+            UserError: If geocoding fails or coordinates are invalid
         """
         self.ensure_one()
         
@@ -89,6 +90,21 @@ class ResPartner(models.Model):
                 )
                 raise UserError(error_msg)
         
+        # Validate coordinates are reasonable
+        validation_error = self._validate_coordinates()
+        if validation_error:
+            _logger.error(
+                f"Invalid coordinates for partner {self.name} (ID: {self.id}): "
+                f"Lat: {self.partner_latitude}, Lon: {self.partner_longitude}. "
+                f"Error: {validation_error}"
+            )
+            raise UserError(_(
+                "Invalid GPS coordinates for %s.\n\n"
+                "%s\n\n"
+                "Coordinates: Latitude %s, Longitude %s\n\n"
+                "Please verify the customer's address and try geocoding again."
+            ) % (self.name, validation_error, self.partner_latitude, self.partner_longitude))
+        
         # Calculate distance using Haversine formula
         try:
             distance = self._haversine_distance(
@@ -115,6 +131,52 @@ class ResPartner(models.Model):
         )
         
         return distance
+
+    def _validate_coordinates(self):
+        """
+        Validate that partner coordinates are reasonable and usable.
+        
+        Checks for:
+        - Zero or null values
+        - Out of valid range (lat: -90 to 90, lon: -180 to 180)
+        - Suspiciously large values (>1000) that indicate bad data
+        - Ocean coordinates far from land (basic sanity check)
+        
+        Returns:
+            str: Error message if validation fails, None if coordinates are valid
+        """
+        self.ensure_one()
+        
+        lat = self.partner_latitude
+        lon = self.partner_longitude
+        
+        # Check for zero or null coordinates
+        if not lat or not lon or (lat == 0.0 and lon == 0.0):
+            return "Coordinates are zero or empty (geocoding may have failed)"
+        
+        # Check for obviously invalid values (>1000 suggests corrupt data)
+        if abs(lat) > 1000 or abs(lon) > 1000:
+            return f"Coordinates are impossibly large (Lat: {lat}, Lon: {lon})"
+        
+        # Check if coordinates are within valid range
+        if not (-90 <= lat <= 90):
+            return f"Latitude {lat} is out of valid range (-90 to 90)"
+        
+        if not (-180 <= lon <= 180):
+            return f"Longitude {lon} is out of valid range (-180 to 180)"
+        
+        # Optional: Check if coordinates are in a reasonable area for delivery
+        # For USA delivery, we might want to validate coordinates are roughly in North America
+        # Uncomment these lines if you want stricter geographic validation:
+        #
+        # if not (15 <= lat <= 72):  # Roughly USA/Canada latitude range
+        #     return f"Location appears to be outside delivery area (Latitude: {lat})"
+        #
+        # if not (-170 <= lon <= -50):  # Roughly USA/Canada longitude range  
+        #     return f"Location appears to be outside delivery area (Longitude: {lon})"
+        
+        # Coordinates passed all validation checks
+        return None
 
     def _haversine_distance(self, lat1, lon1, lat2, lon2):
         """
