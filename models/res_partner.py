@@ -16,23 +16,16 @@ EARTH_RADIUS_MILES = 3959
 class ResPartner(models.Model):
     _inherit = 'res.partner'
 
-    x_partner_distance = fields.Float(
-        string='Distance from Origin (miles)',
-        digits=(10, 2),
-        help='Calculated distance from origin point to customer location',
-        readonly=True,
-    )
-
     def calculate_distance_from_origin(self):
         """
-        Calculate and store distance from fixed origin point to partner location.
+        Calculate distance from fixed origin point to partner location.
+        Does NOT store the result - calculates on-the-fly.
         
         Workflow:
         1. Check if partner has GPS coordinates
         2. If missing, attempt automatic geocoding
-        3. Calculate distance using approximation formula
-        4. Store result in x_partner_distance field
-        5. Return calculated distance
+        3. Calculate distance using Haversine formula
+        4. Return calculated distance
         
         Returns:
             float: Distance in miles
@@ -103,9 +96,6 @@ class ResPartner(models.Model):
                 "Failed to calculate distance for %s.\n\n"
                 "Error: %s"
             ) % (self.name, str(e)))
-        
-        # Store calculated distance
-        self.x_partner_distance = distance
         
         _logger.info(
             f"Calculated distance for partner {self.name} (ID: {self.id}): "
