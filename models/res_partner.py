@@ -18,15 +18,6 @@ EARTH_RADIUS_MILES = 3959
 class ResPartner(models.Model):
     _inherit = 'res.partner'
 
-    # Keep field definition for backward compatibility with existing views/modules
-    # Distance is calculated using Haversine formula and stored for display purposes
-    x_partner_distance = fields.Float(
-        string='Distance from Origin (miles)',
-        digits=(10, 2),
-        help='Calculated distance from origin point to customer location using Haversine formula',
-        readonly=True,
-    )
-
     def _get_delivery_settings(self):
         """
         Get delivery configuration settings from system parameters.
@@ -168,9 +159,6 @@ class ResPartner(models.Model):
                 "Maximum delivery distance: %.0f miles.\n\n"
                 "This customer is outside the delivery service area."
             ) % (self.name, distance, settings['max_distance']))
-        
-        # Store calculated distance in field for display purposes
-        self.x_partner_distance = distance
         
         _logger.info(
             f"Calculated distance for partner {self.name} (ID: {self.id}): "

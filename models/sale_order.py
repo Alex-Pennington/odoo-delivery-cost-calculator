@@ -298,9 +298,15 @@ class SaleOrder(models.Model):
         # Get configured rate per mile
         rate_per_mile = delivery_line._get_rate_per_mile()
         
+        # Calculate current distance (don't rely on stored field)
+        try:
+            distance = self.partner_id.calculate_distance_from_origin()
+        except:
+            distance = 0.0
+        
         return {
             'line': delivery_line,
-            'distance': self.partner_id.x_partner_distance,
+            'distance': distance,
             'rate': rate_per_mile,
             'cost': delivery_line.price_unit,
             'calculated': delivery_line.delivery_cost_calculated,
