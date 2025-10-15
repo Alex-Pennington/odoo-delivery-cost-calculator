@@ -46,7 +46,6 @@ To modify default settings, edit the constants at the top of the model files:
 ORIGIN_LAT = 38.3353600  # Origin latitude
 ORIGIN_LON = -82.7815527  # Origin longitude
 EARTH_RADIUS_MILES = 3959
-PI = 3.14159
 ```
 
 **In `models/sale_order.py`:**
@@ -311,10 +310,51 @@ View logs in Odoo's standard logging output.
 
 ## Upgrading
 
-When upgrading to more accurate distance calculations (e.g., Haversine):
-1. Update `_approximate_distance()` method in `res_partner.py`
-2. Optionally trigger recalculation for all existing orders
-3. Test with known distances to verify accuracy
+### From v17.0.2.x to v17.0.3.0 (Haversine Formula Update)
+
+**Important**: Version 17.0.3.0 replaces the inaccurate flat-Earth distance approximation with the accurate Haversine formula. This will affect distance calculations.
+
+**What Changed:**
+- Old formula was significantly inaccurate (could be 2-3x off)
+- New Haversine formula provides accurate great-circle distances
+- Example: Location that was calculated as 12.76 miles now correctly shows as ~12.26 miles
+
+**Impact:**
+- All future distance calculations will be accurate
+- Existing stored distances in `x_partner_distance` may be inaccurate
+- Delivery costs will be recalculated next time customer places order
+
+**Recommended Actions After Upgrade:**
+
+1. **Clear existing distances** (forces recalculation):
+   ```sql
+   UPDATE res_partner SET x_partner_distance = NULL;
+   ```
+
+2. **Or recalculate for active customers** (Python):
+   ```python
+   # In Odoo shell or via developer console
+   partners = env['res.partner'].search([('x_partner_distance', '>', 0)])
+   for partner in partners:
+       try:
+           partner.calculate_distance_from_origin()
+       except:
+           pass  # Skip partners with invalid addresses
+   ```
+
+3. **Test with known locations** to verify accuracy against Google Maps
+
+**No action required** if you're okay with distances being recalculated on next order.
+
+---
+
+## Upgrading to More Accurate Distance
+
+If you need even more accuracy (accounting for roads, traffic, etc.):
+1. Integrate with Google Maps Distance Matrix API
+2. Update `_haversine_distance()` method in `res_partner.py`
+3. Add API key configuration
+4. Test with known distances to verify accuracy
 
 ## License
 LGPL-3
@@ -324,12 +364,25 @@ For issues or questions, contact your system administrator or module developer.
 
 ## Version History
 
+- **17.0.3.0.0**: Accurate Haversine Distance Formula
+  - **BREAKING**: Replaced inaccurate flat-Earth approximation with Haversine formula
+  - Significantly improved distance calculation accuracy
+  - Example: Old formula calculated 12.76 miles, new formula correctly calculates ~12.26 miles
+  - Added proper error handling for distance calculations
+  - Removed unused PI constant
+  - Existing partner distances may need recalculation
+  - See "Upgrading" section for migration instructions
+
 - **17.0.2.0.0**: GPS Delivery Carrier Feature
   - Added custom GPS delivery carrier for website checkout
   - Smart availability rules (max 60 miles, max 8 units)
   - Integration with Odoo delivery/website_sale_delivery modules
   - Comprehensive logging for carrier availability checks
   - Configuration view in delivery carrier form
+
+- **17.0.1.0.1**: Bug Fixes
+  - Fixed _display_address() conflict with Odoo core method
+  - Fixed website_published field dependency issue
 
 - **17.0.1.0.0**: Initial release
   - Automatic delivery cost calculation

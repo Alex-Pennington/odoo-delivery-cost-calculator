@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
+import math
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 
@@ -10,7 +11,6 @@ _logger = logging.getLogger(__name__)
 ORIGIN_LAT = 38.3353600
 ORIGIN_LON = -82.7815527
 EARTH_RADIUS_MILES = 3959
-PI = 3.14159
 
 
 class ResPartner(models.Model):
@@ -87,13 +87,22 @@ class ResPartner(models.Model):
                 )
                 raise UserError(error_msg)
         
-        # Calculate distance
-        distance = self._approximate_distance(
-            ORIGIN_LAT,
-            ORIGIN_LON,
-            self.partner_latitude,
-            self.partner_longitude
-        )
+        # Calculate distance using Haversine formula
+        try:
+            distance = self._haversine_distance(
+                ORIGIN_LAT,
+                ORIGIN_LON,
+                self.partner_latitude,
+                self.partner_longitude
+            )
+        except Exception as e:
+            _logger.error(
+                f"Distance calculation failed for partner {self.name} (ID: {self.id}): {str(e)}"
+            )
+            raise UserError(_(
+                "Failed to calculate distance for %s.\n\n"
+                "Error: %s"
+            ) % (self.name, str(e)))
         
         # Store calculated distance
         self.x_partner_distance = distance
@@ -105,29 +114,61 @@ class ResPartner(models.Model):
         
         return distance
 
-    def _approximate_distance(self, lat1, lon1, lat2, lon2):
+    def _haversine_distance(self, lat1, lon1, lat2, lon2):
         """
-        Calculate approximate distance between two GPS coordinates using simplified formula.
+        Calculate accurate great-circle distance between two GPS coordinates
+        using the Haversine formula.
         
-        This is a rough approximation suitable for relatively short distances.
-        For more accurate results over longer distances, consider implementing
-        the Haversine formula.
+        The Haversine formula determines the shortest distance over the Earth's
+        surface, giving an "as-the-crow-flies" distance between the points
+        (ignoring hills, roads, etc.). This is significantly more accurate than
+        flat-Earth approximations, especially over longer distances.
+        
+        Formula:
+            a = sin²(Δlat/2) + cos(lat1) · cos(lat2) · sin²(Δlon/2)
+            c = 2 · asin(√a)
+            d = R · c
+        
+        Where:
+            - Δlat is the difference in latitude
+            - Δlon is the difference in longitude
+            - R is Earth's radius (3959 miles)
         
         Args:
-            lat1 (float): Origin latitude
-            lon1 (float): Origin longitude
-            lat2 (float): Destination latitude
-            lon2 (float): Destination longitude
+            lat1 (float): Origin latitude in decimal degrees
+            lon1 (float): Origin longitude in decimal degrees
+            lat2 (float): Destination latitude in decimal degrees
+            lon2 (float): Destination longitude in decimal degrees
             
         Returns:
-            float: Approximate distance in miles
+            float: Great-circle distance in miles
+            
+        Example:
+            >>> distance = self._haversine_distance(38.3353600, -82.7815527, 
+            ...                                      38.5116816, -82.7264454)
+            >>> print(f"{distance:.2f} miles")
+            12.26 miles
         """
-        # Convert latitude and longitude differences to radians
-        lat_diff_rad = (lat2 - lat1) * PI / 180
-        lon_diff_rad = (lon2 - lon1) * PI / 180
+        # Earth's radius in miles
+        R = EARTH_RADIUS_MILES
         
-        # Calculate distance using simplified formula
-        distance = EARTH_RADIUS_MILES * ((lat_diff_rad**2) + (lon_diff_rad**2))**0.5
+        # Convert latitude and longitude from degrees to radians
+        lat1_rad = math.radians(lat1)
+        lat2_rad = math.radians(lat2)
+        delta_lat = math.radians(lat2 - lat1)
+        delta_lon = math.radians(lon2 - lon1)
+        
+        # Haversine formula
+        # a = sin²(Δlat/2) + cos(lat1) · cos(lat2) · sin²(Δlon/2)
+        a = (math.sin(delta_lat / 2) ** 2 + 
+             math.cos(lat1_rad) * math.cos(lat2_rad) * 
+             math.sin(delta_lon / 2) ** 2)
+        
+        # c = 2 · asin(√a)
+        c = 2 * math.asin(math.sqrt(a))
+        
+        # d = R · c
+        distance = R * c
         
         return distance
 
