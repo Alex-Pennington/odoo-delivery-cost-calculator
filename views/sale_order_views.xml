@@ -24,17 +24,22 @@
         </field>
     </record>
 
-    <!-- Partner Form View - Show Distance Field -->
+    <!-- Partner Form View - Add Calculate Distance Button -->
     <record id="view_partner_form_distance" model="ir.ui.view">
         <field name="name">res.partner.form.distance</field>
         <field name="model">res.partner</field>
         <field name="inherit_id" ref="base.view_partner_form"/>
         <field name="arch" type="xml">
-            <!-- Add distance field after coordinates (if geo_localize view exists) -->
+            <!-- Add distance field and button after latitude -->
             <xpath expr="//field[@name='partner_latitude']" position="after">
                 <field name="x_partner_distance" 
-                       readonly="1"
-                       help="Calculated distance from origin to customer location"/>
+                       readonly="1"/>
+                <button name="calculate_distance_from_origin" 
+                        type="object" 
+                        string="Calculate Distance"
+                        class="btn-link"
+                        help="Calculate distance from origin using Haversine formula"
+                        icon="fa-refresh"/>
             </xpath>
         </field>
     </record>
