@@ -11,6 +11,7 @@ class ResConfigSettings(models.TransientModel):
         string='Origin Latitude',
         config_parameter='delivery_cost_calculator.origin_latitude',
         default=38.48358903556404,
+        digits=(12, 8),  # Total 12 digits, 8 after decimal point
         help='Latitude coordinate of delivery origin point (decimal degrees)',
     )
     
@@ -18,6 +19,7 @@ class ResConfigSettings(models.TransientModel):
         string='Origin Longitude',
         config_parameter='delivery_cost_calculator.origin_longitude',
         default=-82.7803864690895,
+        digits=(12, 8),  # Total 12 digits, 8 after decimal point
         help='Longitude coordinate of delivery origin point (decimal degrees)',
     )
     
@@ -26,6 +28,7 @@ class ResConfigSettings(models.TransientModel):
         string='Rate per Mile',
         config_parameter='delivery_cost_calculator.rate_per_mile',
         default=2.5,
+        digits=(10, 2),  # Like $2.50 or $12.99
         help='Cost per mile for delivery calculation (e.g., 2.5 = $2.50/mile)',
     )
     
@@ -34,6 +37,7 @@ class ResConfigSettings(models.TransientModel):
         string='Maximum Delivery Distance',
         config_parameter='delivery_cost_calculator.max_distance',
         default=75.0,
+        digits=(10, 2),  # Like 75.50 miles
         help='Maximum distance in miles for delivery service (customers beyond this distance will be rejected)',
     )
     
@@ -50,6 +54,7 @@ class ResConfigSettings(models.TransientModel):
         string='GPS Carrier Max Distance',
         config_parameter='delivery_cost_calculator.gps_carrier_max_distance',
         default=60.0,
+        digits=(10, 2),  # Like 60.50 miles
         help='Maximum distance in miles for GPS delivery carrier availability on website (separate from manual delivery limit)',
     )
     
@@ -58,6 +63,7 @@ class ResConfigSettings(models.TransientModel):
         string='Road Distance Multiplier',
         config_parameter='delivery_cost_calculator.road_multiplier',
         default=1.3,
+        digits=(10, 2),  # Like 1.25 or 1.40
         help='Multiply straight-line distance by this factor to estimate road distance. '
              'Typical values: 1.2 (straight roads), 1.3 (average), 1.4 (winding roads). '
              'Only used when Google Maps API is disabled.',
