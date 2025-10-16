@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Delivery Cost Calculator',
-    'version': '17.0.3.0.0',
+    'version': '17.0.4.0.0',
     'category': 'Sales',
-    'summary': 'Automatic delivery cost calculation based on GPS distance',
+    'summary': 'Automatic delivery cost calculation with Google Maps routing support',
     'description': """
         Delivery Cost Calculator
         ========================
@@ -14,7 +14,7 @@
         ---------
         * Automatic GPS geocoding for customers without coordinates
         * Accurate distance calculation using Haversine formula
-        * Configurable rate per mile ($3.00 default)
+        * Configurable rate per mile ($2.50 default)
         * Price locking to prevent recalculation on address changes
         * Manual recalculation option
         * Works with both manual quotes and website orders
@@ -34,14 +34,15 @@
         
         Configuration:
         --------------
-        * Origin coordinates: (38.3353600, -82.7815527)
-        * Rate: $3.00 per mile
-        * Max distance: 60 miles
+        * Origin coordinates: (38.48358903556404, -82.7803864690895)
+        * Rate: $2.50 per mile
+        * Max distance (manual orders): 75 miles
+        * Max distance (website): 60 miles
         * Max quantity: 8 units
         * Distance formula: Haversine (accurate great-circle distance)
         * Distance stored in res.partner.x_partner_distance field
         
-        To customize, edit constants in models/sale_order.py and models/delivery_carrier.py
+        To customize, edit constants in models/res_partner.py and models/delivery_carrier.py
         
         Note: v17.0.3.0 replaces inaccurate flat-Earth approximation with Haversine formula.
         Existing distances may need recalculation for accuracy.

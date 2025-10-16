@@ -10,14 +10,14 @@ class ResConfigSettings(models.TransientModel):
     delivery_origin_latitude = fields.Float(
         string='Origin Latitude',
         config_parameter='delivery_cost_calculator.origin_latitude',
-        default=38.3353600,
+        default=38.48358903556404,
         help='Latitude coordinate of delivery origin point (decimal degrees)',
     )
     
     delivery_origin_longitude = fields.Float(
         string='Origin Longitude',
         config_parameter='delivery_cost_calculator.origin_longitude',
-        default=-82.7815527,
+        default=-82.7803864690895,
         help='Longitude coordinate of delivery origin point (decimal degrees)',
     )
     
@@ -25,15 +25,15 @@ class ResConfigSettings(models.TransientModel):
     delivery_rate_per_mile = fields.Float(
         string='Rate per Mile',
         config_parameter='delivery_cost_calculator.rate_per_mile',
-        default=3.0,
-        help='Cost per mile for delivery calculation (e.g., 3.0 = $3.00/mile)',
+        default=2.5,
+        help='Cost per mile for delivery calculation (e.g., 2.5 = $2.50/mile)',
     )
     
     # Distance Restrictions
     delivery_max_distance = fields.Float(
         string='Maximum Delivery Distance',
         config_parameter='delivery_cost_calculator.max_distance',
-        default=100.0,
+        default=75.0,
         help='Maximum distance in miles for delivery service (customers beyond this distance will be rejected)',
     )
     
@@ -51,4 +51,31 @@ class ResConfigSettings(models.TransientModel):
         config_parameter='delivery_cost_calculator.gps_carrier_max_distance',
         default=60.0,
         help='Maximum distance in miles for GPS delivery carrier availability on website (separate from manual delivery limit)',
+    )
+    
+    # Road Distance Adjustment
+    delivery_road_multiplier = fields.Float(
+        string='Road Distance Multiplier',
+        config_parameter='delivery_cost_calculator.road_multiplier',
+        default=1.3,
+        help='Multiply straight-line distance by this factor to estimate road distance. '
+             'Typical values: 1.2 (straight roads), 1.3 (average), 1.4 (winding roads). '
+             'Only used when Google Maps API is disabled.',
+    )
+    
+    # Google Maps API Configuration
+    delivery_google_api_key = fields.Char(
+        string='Google Maps API Key',
+        config_parameter='delivery_cost_calculator.google_api_key',
+        help='Google Cloud Platform API key for Distance Matrix API. '
+             'Get one at: https://console.cloud.google.com/ '
+             'Costs approximately $0.005 per distance calculation.',
+    )
+    
+    delivery_use_google_maps = fields.Boolean(
+        string='Use Google Maps for Distance',
+        config_parameter='delivery_cost_calculator.use_google_maps',
+        default=False,
+        help='Enable to use Google Maps Distance Matrix API for accurate road distances. '
+             'Requires API key. When disabled, uses Haversine formula × road multiplier.',
     )

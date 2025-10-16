@@ -7,7 +7,7 @@ from odoo.exceptions import UserError
 _logger = logging.getLogger(__name__)
 
 # Default configuration constants - overridden by settings
-DEFAULT_RATE_PER_MILE = 3.0
+DEFAULT_RATE_PER_MILE = 2.5
 DEFAULT_MAX_DISTANCE_MILES = 60.0
 DEFAULT_MAX_ORDER_QUANTITY = 8
 

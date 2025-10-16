@@ -8,7 +8,7 @@ _logger = logging.getLogger(__name__)
 
 # Configuration constants
 DELIVERY_PRODUCT_NAME = 'Delivery'
-DEFAULT_RATE_PER_MILE = 3.0  # Fallback if setting not configured
+DEFAULT_RATE_PER_MILE = 2.5  # Fallback if setting not configured
 
 
 class SaleOrderLine(models.Model):

@@ -12,14 +12,15 @@
                      invisible="delivery_type != 'gps'">
                     <strong>GPS Distance-Based Delivery Configuration</strong>
                     <ul class="mb-0">
-                        <li><strong>Origin:</strong> 38.3353600, -82.7815527</li>
-                        <li><strong>Rate:</strong> $3.00 per mile</li>
-                        <li><strong>Max Distance:</strong> 60 miles</li>
+                        <li><strong>Origin:</strong> 38.48358903556404, -82.7803864690895</li>
+                        <li><strong>Rate:</strong> $2.50 per mile</li>
+                        <li><strong>Max Distance (Website):</strong> 60 miles</li>
+                        <li><strong>Max Distance (Manual Orders):</strong> 75 miles</li>
                         <li><strong>Max Order Quantity:</strong> 8 units</li>
                     </ul>
                     <p class="mb-0 mt-2">
                         <em>To customize these values, edit constants in 
-                        models/delivery_carrier.py</em>
+                        models/delivery_carrier.py and models/res_partner.py</em>
                     </p>
                 </div>
             </xpath>

@@ -2,16 +2,18 @@
 
 import logging
 import math
+import requests
 from odoo import models, fields, api, _
 from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
 
 # Default configuration constants - can be overridden in Settings
-DEFAULT_ORIGIN_LAT = 38.3353600
-DEFAULT_ORIGIN_LON = -82.7815527
-DEFAULT_RATE_PER_MILE = 3.0
-DEFAULT_MAX_DELIVERY_DISTANCE = 100.0
+DEFAULT_ORIGIN_LAT = 38.48358903556404
+DEFAULT_ORIGIN_LON = -82.7803864690895
+DEFAULT_RATE_PER_MILE = 2.5
+DEFAULT_MAX_DELIVERY_DISTANCE = 75.0
+DEFAULT_ROAD_MULTIPLIER = 1.3  # Fallback: roads typically 30% longer than straight line
 EARTH_RADIUS_MILES = 3959
 
 
@@ -35,7 +37,8 @@ class ResPartner(models.Model):
         Falls back to defaults if settings not configured.
         
         Returns:
-            dict: Dictionary with keys: origin_lat, origin_lon, rate_per_mile, max_distance
+            dict: Dictionary with keys: origin_lat, origin_lon, rate_per_mile, max_distance,
+                  road_multiplier, google_api_key, use_google_maps
         """
         ICP = self.env['ir.config_parameter'].sudo()
         
@@ -56,7 +59,125 @@ class ResPartner(models.Model):
                 'delivery_cost_calculator.max_distance',
                 DEFAULT_MAX_DELIVERY_DISTANCE
             )),
+            'road_multiplier': float(ICP.get_param(
+                'delivery_cost_calculator.road_multiplier',
+                DEFAULT_ROAD_MULTIPLIER
+            )),
+            'google_api_key': ICP.get_param(
+                'delivery_cost_calculator.google_api_key',
+                ''
+            ),
+            'use_google_maps': ICP.get_param(
+                'delivery_cost_calculator.use_google_maps',
+                'False'
+            ) == 'True',
         }
+
+    def _get_google_maps_distance(self, origin_lat, origin_lon, dest_lat, dest_lon):
+        """
+        Get actual driving distance using Google Maps Distance Matrix API.
+        
+        This provides real-world road distances considering:
+        - Actual road networks
+        - One-way streets
+        - Turn restrictions
+        - Typical routing
+        
+        Requires:
+        - Google Cloud Platform account
+        - Distance Matrix API enabled
+        - API key configured in settings
+        
+        Cost: Approximately $0.005 per calculation
+        Documentation: https://developers.google.com/maps/documentation/distance-matrix
+        
+        Args:
+            origin_lat (float): Origin latitude in decimal degrees
+            origin_lon (float): Origin longitude in decimal degrees
+            dest_lat (float): Destination latitude in decimal degrees
+            dest_lon (float): Destination longitude in decimal degrees
+            
+        Returns:
+            float: Driving distance in miles
+            
+        Raises:
+            Exception: If API call fails (will be caught and fallback to Haversine)
+        """
+        settings = self._get_delivery_settings()
+        api_key = settings.get('google_api_key', '')
+        
+        if not api_key:
+            _logger.warning(
+                "Google Maps API key not configured. "
+                "Falling back to Haversine × road multiplier."
+            )
+            straight = self._haversine_distance(origin_lat, origin_lon, dest_lat, dest_lon)
+            return straight * settings.get('road_multiplier', DEFAULT_ROAD_MULTIPLIER)
+        
+        url = "https://maps.googleapis.com/maps/api/distancematrix/json"
+        params = {
+            'origins': f"{origin_lat},{origin_lon}",
+            'destinations': f"{dest_lat},{dest_lon}",
+            'units': 'imperial',  # Get results in miles
+            'mode': 'driving',
+            'key': api_key
+        }
+        
+        try:
+            _logger.info(
+                f"Calling Google Maps API for distance: "
+                f"({origin_lat},{origin_lon}) → ({dest_lat},{dest_lon})"
+            )
+            
+            response = requests.get(url, params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            
+            if data['status'] == 'OK':
+                element = data['rows'][0]['elements'][0]
+                
+                if element['status'] == 'OK':
+                    # Distance is in meters, convert to miles
+                    distance_meters = element['distance']['value']
+                    distance_miles = distance_meters * 0.000621371
+                    
+                    _logger.info(
+                        f"Google Maps API returned: {distance_miles:.2f} miles "
+                        f"(duration: {element['duration']['text']})"
+                    )
+                    
+                    return distance_miles
+                else:
+                    _logger.warning(
+                        f"Google Maps API element status: {element['status']}. "
+                        "Falling back to Haversine × road multiplier."
+                    )
+                    straight = self._haversine_distance(origin_lat, origin_lon, dest_lat, dest_lon)
+                    return straight * settings.get('road_multiplier', DEFAULT_ROAD_MULTIPLIER)
+            else:
+                _logger.warning(
+                    f"Google Maps API error: {data.get('status')} - "
+                    f"{data.get('error_message', 'No error message')}. "
+                    "Falling back to Haversine × road multiplier."
+                )
+                straight = self._haversine_distance(origin_lat, origin_lon, dest_lat, dest_lon)
+                return straight * settings.get('road_multiplier', DEFAULT_ROAD_MULTIPLIER)
+                
+        except requests.RequestException as e:
+            _logger.error(
+                f"Google Maps API request failed: {str(e)}. "
+                "Falling back to Haversine × road multiplier."
+            )
+            straight = self._haversine_distance(origin_lat, origin_lon, dest_lat, dest_lon)
+            return straight * settings.get('road_multiplier', DEFAULT_ROAD_MULTIPLIER)
+        except Exception as e:
+            _logger.error(
+                f"Unexpected error calling Google Maps API: {str(e)}. "
+                "Falling back to Haversine × road multiplier.",
+                exc_info=True
+            )
+            straight = self._haversine_distance(origin_lat, origin_lon, dest_lat, dest_lon)
+            return straight * settings.get('road_multiplier', DEFAULT_ROAD_MULTIPLIER)
 
     def calculate_distance_from_origin(self):
         """
@@ -141,14 +262,34 @@ class ResPartner(models.Model):
         # Get delivery settings
         settings = self._get_delivery_settings()
         
-        # Calculate distance using Haversine formula
+        # Calculate distance using Google Maps API or Haversine formula
         try:
-            distance = self._haversine_distance(
-                settings['origin_lat'],
-                settings['origin_lon'],
-                self.partner_latitude,
-                self.partner_longitude
-            )
+            if settings.get('use_google_maps', False):
+                # Use Google Maps Distance Matrix API for accurate road distance
+                distance = self._get_google_maps_distance(
+                    settings['origin_lat'],
+                    settings['origin_lon'],
+                    self.partner_latitude,
+                    self.partner_longitude
+                )
+                _logger.info(
+                    f"Using Google Maps API - calculated distance: {distance:.2f} miles"
+                )
+            else:
+                # Use Haversine formula with road multiplier
+                straight_line = self._haversine_distance(
+                    settings['origin_lat'],
+                    settings['origin_lon'],
+                    self.partner_latitude,
+                    self.partner_longitude
+                )
+                road_multiplier = settings.get('road_multiplier', DEFAULT_ROAD_MULTIPLIER)
+                distance = straight_line * road_multiplier
+                
+                _logger.info(
+                    f"Using Haversine × {road_multiplier}: "
+                    f"straight-line {straight_line:.2f} mi → road estimate {distance:.2f} mi"
+                )
         except Exception as e:
             _logger.error(
                 f"Distance calculation failed for partner {self.name} (ID: {self.id}): {str(e)}"
@@ -256,7 +397,7 @@ class ResPartner(models.Model):
             float: Great-circle distance in miles
             
         Example:
-            >>> distance = self._haversine_distance(38.3353600, -82.7815527, 
+            >>> distance = self._haversine_distance(38.48358903556404, -82.7803864690895, 
             ...                                      38.5116816, -82.7264454)
             >>> print(f"{distance:.2f} miles")
             12.26 miles
