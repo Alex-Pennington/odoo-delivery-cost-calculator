@@ -7,13 +7,20 @@
         <field name="priority" eval="90"/>
         <field name="inherit_id" ref="sale.res_config_settings_view_form"/>
         <field name="arch" type="xml">
-            <!-- Add GPS Delivery settings after the delivery module settings -->
-            <xpath expr="//div[@class='row mt16 o_settings_container' and .//div[@name='module_delivery']]" position="inside">
+            <!-- Add GPS Delivery settings after the delivery module checkbox -->
+            <xpath expr="//field[@name='module_delivery']" position="after">
+                
+                <!-- Spacer to create visual separation -->
+                <div class="col-12 mt32"/>
                 
                 <!-- GPS Delivery Cost Calculator Settings -->
+                <div class="col-12">
+                    <h3 class="mt16">GPS Delivery Cost Calculator</h3>
+                </div>
+                
                 <div class="col-12 col-lg-6 o_setting_box o_searchable_setting">
                     <div class="o_setting_left_pane">
-                        <span class="o_form_label">GPS Delivery Calculator</span>
+                        <span class="o_form_label">Origin</span>
                     </div>
                     <div class="o_setting_right_pane">
                         <label for="delivery_origin_latitude">
@@ -59,7 +66,7 @@
                 <!-- Distance Limits -->
                 <div class="col-12 col-lg-6 o_setting_box o_searchable_setting">
                     <div class="o_setting_left_pane">
-                        <span class="o_form_label">Distance Limits</span>
+                        <span class="o_form_label">Distances</span>
                     </div>
                     <div class="o_setting_right_pane">
                         <label for="delivery_max_distance">
@@ -84,7 +91,7 @@
                 <!-- Order Limits -->
                 <div class="col-12 col-lg-6 o_setting_box o_searchable_setting">
                     <div class="o_setting_left_pane">
-                        <span class="o_form_label">Order Limits</span>
+                        <span class="o_form_label">Limits</span>
                     </div>
                     <div class="o_setting_right_pane">
                         <label for="delivery_max_order_quantity">
@@ -105,7 +112,7 @@
                 <!-- Road Distance Configuration -->
                 <div class="col-12 col-lg-6 o_setting_box o_searchable_setting">
                     <div class="o_setting_left_pane">
-                        <span class="o_form_label">Road Distance</span>
+                        <span class="o_form_label">Road Factor</span>
                     </div>
                     <div class="o_setting_right_pane">
                         <label for="delivery_road_multiplier">
@@ -121,7 +128,7 @@
                             </div>
                             <div class="row mt8">
                                 <span class="col-12 text-muted fst-italic">
-                                    Typical values: 1.2 (straight roads), 1.3 (average), 1.4 (winding roads)
+                                    Typical: 1.2 (straight), 1.3 (average), 1.4 (winding)
                                 </span>
                             </div>
                         </div>
@@ -138,23 +145,12 @@
                             <b>Use Google Maps API</b>
                         </label>
                         <div class="text-muted">
-                            Enable for accurate road-based distances (~$0.005 per calculation)
+                            Enable for accurate road-based distances (~$0.005/calc)
                         </div>
                         <div class="content-group mt16" invisible="not delivery_use_google_maps">
                             <div class="row mt8">
                                 <label for="delivery_google_api_key" class="col-3 col-lg-4 o_light_label">API Key</label>
                                 <field name="delivery_google_api_key" class="col-9 col-lg-8" password="True"/>
-                            </div>
-                            <div class="row mt8">
-                                <div class="col-12">
-                                    <button name="%(base.action_open_website)d" 
-                                            type="action" 
-                                            string="Get API Key" 
-                                            icon="fa-external-link" 
-                                            class="btn-link"
-                                            context="{'url': 'https://console.cloud.google.com/'}"/>
-                                    <span class="text-muted ms-2">→ Google Cloud Console</span>
-                                </div>
                             </div>
                         </div>
                     </div>
