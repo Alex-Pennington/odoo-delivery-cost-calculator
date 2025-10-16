@@ -67,6 +67,7 @@ The Delivery Cost Calculator now supports **Google Maps Distance Matrix API** fo
    - Select "**Restrict key**"
    - Check only "**Distance Matrix API**"
 2. Under "**Application restrictions**" (optional):
+
    - Select "**IP addresses**"
    - Add your Odoo server's IP address
 3. Click "**Save**"
