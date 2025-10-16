@@ -155,11 +155,11 @@ class DeliveryCarrier(models.Model):
         
         # Calculate distance using existing method from res.partner
         try:
-            distance = partner.calculate_distance_from_origin()
+            distance, calculation_method = partner.calculate_distance_from_origin()
             
             _logger.debug(
                 f"GPS delivery: Calculated distance for {partner.name}: "
-                f"{distance:.2f} miles"
+                f"{distance:.2f} miles using {calculation_method}"
             )
             
         except Exception as e:

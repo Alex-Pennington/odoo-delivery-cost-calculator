@@ -262,6 +262,9 @@ class ResPartner(models.Model):
         # Get delivery settings
         settings = self._get_delivery_settings()
         
+        # Track which calculation method was used
+        calculation_method = None
+        
         # Calculate distance using Google Maps API or Haversine formula
         try:
             if settings.get('use_google_maps', False):
@@ -272,6 +275,7 @@ class ResPartner(models.Model):
                     self.partner_latitude,
                     self.partner_longitude
                 )
+                calculation_method = 'google_maps'
                 _logger.info(
                     f"Using Google Maps API - calculated distance: {distance:.2f} miles"
                 )
@@ -285,6 +289,7 @@ class ResPartner(models.Model):
                 )
                 road_multiplier = settings.get('road_multiplier', DEFAULT_ROAD_MULTIPLIER)
                 distance = straight_line * road_multiplier
+                calculation_method = 'haversine'
                 
                 _logger.info(
                     f"Using Haversine × {road_multiplier}: "
@@ -314,10 +319,14 @@ class ResPartner(models.Model):
         
         _logger.info(
             f"Calculated distance for partner {self.name} (ID: {self.id}): "
-            f"{distance:.2f} miles from origin ({settings['origin_lat']}, {settings['origin_lon']})"
+            f"{distance:.2f} miles from origin ({settings['origin_lat']}, {settings['origin_lon']}) "
+            f"using {calculation_method}"
         )
         
-        return distance
+        # Return both distance and calculation method
+        # For backwards compatibility, can be called as just: distance = partner.calculate_distance_from_origin()
+        # Or with unpacking: distance, method = partner.calculate_distance_from_origin()
+        return distance, calculation_method
 
     def _validate_coordinates(self):
         """

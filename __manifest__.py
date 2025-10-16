@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 {
     'name': 'Delivery Cost Calculator',
-    'version': '17.0.4.0.0',
+    'version': '17.0.5.0.0',
     'category': 'Sales',
     'summary': 'Automatic delivery cost calculation with Google Maps routing support',
     'description': """

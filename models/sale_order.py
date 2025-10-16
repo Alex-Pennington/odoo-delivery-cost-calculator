@@ -91,7 +91,10 @@ class SaleOrderLine(models.Model):
             rate_per_mile = self._get_rate_per_mile()
             
             # Calculate distance (includes auto-geocoding if needed)
-            distance = partner.calculate_distance_from_origin()
+            distance, calculation_method = partner.calculate_distance_from_origin()
+            
+            # Format method name for display
+            method_display = 'Google Maps API' if calculation_method == 'google_maps' else 'Haversine Formula'
             
             # Calculate delivery cost
             delivery_cost = distance * rate_per_mile
@@ -102,7 +105,7 @@ class SaleOrderLine(models.Model):
             
             _logger.info(
                 f"Delivery cost calculated for SO {self.order_id.name}: "
-                f"Distance={distance:.2f} miles, Rate=${rate_per_mile:.2f}/mile, "
+                f"Distance={distance:.2f} miles ({calculation_method}), Rate=${rate_per_mile:.2f}/mile, "
                 f"Total=${delivery_cost:.2f}"
             )
             
@@ -114,11 +117,12 @@ class SaleOrderLine(models.Model):
                         'Delivery cost has been automatically calculated:\n\n'
                         'Customer: %s\n'
                         'Distance: %.2f miles\n'
+                        'Calculation Method: %s\n'
                         'Rate: $%.2f per mile\n'
                         'Total Delivery Cost: $%.2f\n\n'
                         'This price is now locked and will not change automatically '
                         'if the customer address is updated.'
-                    ) % (partner.name, distance, rate_per_mile, delivery_cost)
+                    ) % (partner.name, distance, method_display, rate_per_mile, delivery_cost)
                 }
             }
             
@@ -171,7 +175,7 @@ class SaleOrderLine(models.Model):
                     rate_per_mile = line._get_rate_per_mile()
                     
                     # Calculate distance
-                    distance = partner.calculate_distance_from_origin()
+                    distance, calculation_method = partner.calculate_distance_from_origin()
                     
                     # Calculate and set delivery cost
                     delivery_cost = distance * rate_per_mile
@@ -182,7 +186,7 @@ class SaleOrderLine(models.Model):
                     
                     _logger.info(
                         f"Delivery cost auto-calculated on create for SO {line.order_id.name}: "
-                        f"Distance={distance:.2f} miles, Cost=${delivery_cost:.2f}"
+                        f"Distance={distance:.2f} miles ({calculation_method}), Cost=${delivery_cost:.2f}"
                     )
                     
                 except UserError as e:
@@ -241,7 +245,10 @@ class SaleOrder(models.Model):
                 rate_per_mile = line._get_rate_per_mile()
                 
                 # Recalculate distance
-                distance = self.partner_id.calculate_distance_from_origin()
+                distance, calculation_method = self.partner_id.calculate_distance_from_origin()
+                
+                # Format method name for display
+                method_display = 'Google Maps API' if calculation_method == 'google_maps' else 'Haversine Formula'
                 
                 # Calculate new delivery cost
                 delivery_cost = distance * rate_per_mile
@@ -254,7 +261,7 @@ class SaleOrder(models.Model):
                 
                 _logger.info(
                     f"Manual recalculation for SO {self.name}: "
-                    f"Distance={distance:.2f} miles, Cost=${delivery_cost:.2f}"
+                    f"Distance={distance:.2f} miles ({calculation_method}), Cost=${delivery_cost:.2f}"
                 )
                 
             except Exception as e:
@@ -273,9 +280,10 @@ class SaleOrder(models.Model):
                 'message': _(
                     'Delivery cost recalculated successfully:\n'
                     'Distance: %.2f miles\n'
+                    'Method: %s\n'
                     'Rate: $%.2f per mile\n'
                     'Total: $%.2f'
-                ) % (distance, rate_per_mile, delivery_cost),
+                ) % (distance, method_display, rate_per_mile, delivery_cost),
                 'type': 'success',
                 'sticky': False,
             }
@@ -300,9 +308,10 @@ class SaleOrder(models.Model):
         
         # Calculate current distance (don't rely on stored field)
         try:
-            distance = self.partner_id.calculate_distance_from_origin()
+            distance, calculation_method = self.partner_id.calculate_distance_from_origin()
         except:
             distance = 0.0
+            calculation_method = None
         
         return {
             'line': delivery_line,
